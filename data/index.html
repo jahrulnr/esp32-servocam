@@ -112,11 +112,33 @@
 								<h2 class="h5 mb-0 text-light">Camera View</h2>
 							</div>
 							<div class="card-body text-center p-2 p-lg-3">
-								<img id="camera" src="" alt="Camera Feed" class="img-fluid rounded shadow-sm" style="max-width: 400px;">
-								<div class="mt-3">
-									<button id="fullscreenBtn" class="btn btn-outline-secondary me-2">
-										Fullscreen
-									</button>
+								<div class="row align-items-center">
+									<div class="col-md-7 col-12 text-center mb-3 mb-md-0">
+										<img id="camera" src="" alt="Camera Feed" class="img-fluid rounded shadow-sm" style="max-width: 100%;">
+										<div class="mt-3">
+											<button id="fullscreenBtn" class="btn btn-outline-secondary me-2">
+												Fullscreen
+											</button>
+										</div>
+									</div>
+									<div class="col-md-5 col-12">
+										<div class="card border-0">
+											<div class="card-header small p-2">Servo Controls</div>
+											<div class="card-body p-2">
+												<div class="mb-3">
+													<label for="xSlider" class="form-label">Pan (X): <span id="xVal">90</span>°</label>
+													<input type="range" class="form-range" min="0" max="180" id="xSlider" value="90">
+												</div>
+												<div class="mb-3">
+													<label for="ySlider" class="form-label">Tilt (Y): <span id="yVal">90</span>°</label>
+													<input type="range" class="form-range" min="0" max="180" id="ySlider" value="90">
+												</div>
+												<div class="d-grid">
+													<button id="resetServos" class="btn btn-outline-secondary">Reset to 90°</button>
+												</div>
+											</div>
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -164,8 +186,9 @@
 					wsUrl = '/ws';
 				}
 
-				// WebSocket connection (placeholder, backend later)
-				let ws;
+					// WebSocket connection (placeholder, backend later)
+					let ws;
+					let prevObjectUrl = null; // last created blob URL for camera frame
 				function connectWS() {
 					ws = new WebSocket(wsUrl);
 					ws.onopen = function() {
@@ -185,12 +208,18 @@
 								logMessage(`[${msg.level.toUpperCase()}] ${msg.message}`);
 							}
 						} else {
-							// Assume binary camera data
-							var reader = new FileReader();
-							reader.onload = function() {
-								$('#camera').attr('src', reader.result);
+							// Assume binary camera data -> use Blob URL to avoid growing memory from base64 strings
+							const img = document.getElementById('camera');
+							const objectUrl = URL.createObjectURL(event.data);
+							img.onload = function() {
+								// Revoke previous URL to free memory
+								if (prevObjectUrl) {
+									URL.revokeObjectURL(prevObjectUrl);
+								}
+								prevObjectUrl = objectUrl;
+								img.onload = null;
 							};
-							reader.readAsDataURL(event.data);
+							img.src = objectUrl;
 						}
 					};
 					ws.onclose = function() {
@@ -281,6 +310,45 @@
 				$('#clearLogBtn').click(function() {
 					$('#logArea').val('');
 				});
+
+					// Servo slider -> send via WebSocket (debounced)
+					function debounce(fn, wait){
+						let t = null;
+						return function(){
+							const args = arguments;
+							clearTimeout(t);
+							t = setTimeout(function(){ fn.apply(null, args); }, wait);
+						}
+					}
+
+					function sendServo(axis, angle){
+						const payload = JSON.stringify({ type: 'servo', axis: axis, angle: angle });
+						if (ws && ws.readyState === WebSocket.OPEN){
+							ws.send(payload);
+						} else {
+							logMessage('[WARN] WebSocket not connected - cannot send servo');
+						}
+					}
+
+					const sendServoDebounced = debounce(function(axis, angle){ sendServo(axis, angle); }, 60);
+
+					$('#xSlider').on('input change', function(){
+						const v = $(this).val();
+						$('#xVal').text(v);
+						sendServoDebounced('x', parseInt(v));
+					});
+					$('#ySlider').on('input change', function(){
+						const v = $(this).val();
+						$('#yVal').text(v);
+						sendServoDebounced('y', parseInt(v));
+					});
+
+					$('#resetServos').click(function(){
+						$('#xSlider').val(90).trigger('input');
+						$('#ySlider').val(90).trigger('input');
+						sendServo('x', 90);
+						sendServo('y', 90);
+					});
 			});
 		</script>
 	</div>

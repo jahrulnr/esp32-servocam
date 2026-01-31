@@ -32,4 +32,5 @@ eTaskState getTaskStatus(BackgroundTask* task);
 void restartTask(BackgroundTask* task);
 
 void networkTask(void *param);
+void handlerTask(void* param);
 void monitorerTask(void* param);

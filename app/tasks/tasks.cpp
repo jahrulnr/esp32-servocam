@@ -12,6 +12,14 @@ void runTasks(){
 		.suspendable = true,
 	});
 	createTask(new BackgroundTask{
+		.name = "handlerTask",
+		.task = handlerTask,
+		.stack = 3 * 1024,
+		.core = tskNO_AFFINITY,
+		.priority = 6,
+		.suspendable = true,
+	});
+	createTask(new BackgroundTask{
 		.name = "monitorerTask",
 		.task = monitorerTask,
 		.stack = 5 * 1024,

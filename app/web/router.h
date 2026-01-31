@@ -3,6 +3,8 @@
 #include <Config.h>
 #include <WebServer.h>
 #include <WebSocketsServer.h>
+#include <SpiJsonDocument.h>
+#include <main.h>
 
 extern WebServer server;
 extern WebSocketsServer wsServer;
@@ -27,12 +29,35 @@ inline void onWsEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t leng
       break;
     case WStype_TEXT:
       {
-        SpiJsonDocument body;
-        deserializeJson(body, payload);
+          SpiJsonDocument body;
+          deserializeJson(body, payload);
 
-        if (body["type"] == "ping") {
-          return;
-        }
+          if (body["type"] == "ping") {
+            return;
+          }
+
+          // Servo control message: { type: "servo", axis: "x"|"y", angle: <0-180> }
+          if (body["type"] == "servo") {
+            String axis = body["axis"] | "";
+            int angle = body["angle"] | -1;
+            if (angle >= 0) {
+              if (axis == "x") {
+                if (xServo != nullptr) xServo->setAngle(angle);
+              } else if (axis == "y") {
+                if (yServo != nullptr) yServo->setAngle(angle);
+              }
+
+              // send ack back to client
+              SpiJsonDocument resp;
+              resp["type"] = "servo_ack";
+              resp["axis"] = axis;
+              resp["angle"] = angle;
+              String out;
+              serializeJson(resp, out);
+              wsServer.sendTXT(num, out);
+            }
+            return;
+          }
       }
       break;
     case WStype_BIN:

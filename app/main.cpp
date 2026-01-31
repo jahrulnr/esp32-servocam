@@ -3,6 +3,8 @@
 #include "tasks/tasks.h"
 
 FTPServer ftpServer(STORAGE);
+ServoControl* xServo;
+ServoControl* yServo;
 
 int I2Cdevices = 0;
 void init() {
@@ -56,6 +58,15 @@ void setup() {
 		ESP_LOGE("Camera", "init failed with error 0x%x (%s)", err, esp_err_to_name(err));
 	}
   delay(1);
+
+	ESP32PWM::allocateTimer(0);
+	ESP32PWM::allocateTimer(1);
+  xServo = new ServoControl(X_SERVO_PIN, 60, 120, DEFAULT_X_ANGLE);
+  yServo = new ServoControl(Y_SERVO_PIN, 0, 60, DEFAULT_Y_ANGLE);
+	delay(1);
+  xServo->setAngle(DEFAULT_X_ANGLE+1); // trigger update
+  delay(1);
+  yServo->setAngle(DEFAULT_Y_ANGLE+1); // trigger update
 
 	runTasks();
 }

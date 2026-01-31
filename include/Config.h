@@ -1,6 +1,7 @@
 #pragma once
 #include <Secret.h>
 #include <LittleFS.h>
+#include <HW.h>
 
 #define STORAGE LittleFS
 
