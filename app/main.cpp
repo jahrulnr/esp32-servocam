@@ -1,10 +1,6 @@
 #include <Arduino.h>
-#include <Config.h>
-#include <CameraConfig.h>
-#include "esp_camera.h"  
-#include <FTPServer.h>
-#include <gpt.h>
-#include <WiFiManager.h>
+#include <main.h>
+#include "tasks/tasks.h"
 
 FTPServer ftpServer(STORAGE);
 
@@ -13,13 +9,16 @@ void init() {
   heap_caps_malloc_extmem_enable(0);
   setCpuFrequencyMhz(240);
   Serial.begin(115200);
+  STORAGE.begin(true);
 }
 
 void setup() {
-  STORAGE.begin(true);
-  
   ai.init(GPT_API_KEY);
   ai.setSystemMessage(GPT_SYSTEM_MESSAGE);
+
+	#ifdef ESP32
+		WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+	#endif
 
   camera_config_t config;
 	config.ledc_channel = LEDC_CHANNEL_0;
@@ -44,7 +43,9 @@ void setup() {
 	config.pixel_format = CAMERA_PIXEL_FORMAT;
 	config.jpeg_quality = CAMERA_QUALITY;  // 0-63, lower is better quality
 	config.frame_size = CAMERA_FRAME_SIZE;
-  config.grab_mode = psramFound() ? CAMERA_GRAB_LATEST : CAMERA_GRAB_WHEN_EMPTY;
+  config.grab_mode = psramFound() 
+		? CAMERA_GRAB_LATEST 
+		: CAMERA_GRAB_WHEN_EMPTY;
   config.fb_count = psramFound() ? 2 : 1;
   config.fb_location = psramFound() 
     ? CAMERA_FB_IN_PSRAM
@@ -56,40 +57,9 @@ void setup() {
 	}
   delay(1);
 
-	wifiManager.init();
-	wifiManager.addNetwork(WIFI_SSID, WIFI_PASS);
-	wifiManager.begin();
-
-	FTPServer ftpServer(STORAGE);
-	ftpServer.begin(FTP_USER, FTP_PASS);
+	runTasks();
 }
 
 void loop() {
-	delay(1000);
-	static const char* imageFile = "/cache/sample.jpg";
-	static bool ipPrinted = false;
-
-	if (wifiManager.isConnected()) {
-		ftpServer.handleFTP();
-		if (!ipPrinted) {
-			log_i("ip %s", wifiManager.getIPAddress().c_str());
-			ipPrinted = true;
-		}
-	}
-
-	if (!esp_camera_available_frames()) return;
-
-	auto fb = esp_camera_fb_get();
-	if (!fb) return;
-
-	if (!STORAGE.exists(imageFile)) {
-		File imgFile = STORAGE.open(imageFile, FILE_WRITE);
-		if (imgFile) {
-			imgFile.write(fb->buf, fb->len);
-			imgFile.close();
-		}
-	}
-
-	log_i("frame size: %d", fb->len);
-	esp_camera_fb_return(fb);
+  vTaskDelete(NULL);
 }

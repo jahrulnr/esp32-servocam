@@ -17,7 +17,7 @@ public:
      * Initialize WiFi manager
      * @return true if successful
      */
-    bool init();
+    bool init(const char *hostname = "esp32.local");
 
     /**
      * Start WiFi connection process

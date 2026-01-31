@@ -8,10 +8,11 @@ WifiManager::~WifiManager() {
     stopHotspot();
 }
 
-bool WifiManager::init() {
+bool WifiManager::init(const char *hostname) {
     ESP_LOGI("WIFI", "Initializing WiFi manager");
     WiFi.onEvent(onWiFiEvent);
-    WiFi.persistent(false);
+    WiFi.persistent(true);
+    WiFi.setHostname(hostname);
 
     delay(1);
     return true;
@@ -269,7 +270,9 @@ void WifiManager::stopHotspot() {
 }
 
 void WifiManager::handle() {
+    static const char* IP;
     if (!apMode && !isConnected()) {
+        IP = nullptr;
         unsigned long now = millis();
         if (now - lastReconnectAttempt > 10000) {
             ESP_LOGI("WIFI", "Attempting to reconnect...");
@@ -277,19 +280,23 @@ void WifiManager::handle() {
             lastReconnectAttempt = now;
         }
     }
+    else if (WiFi.isConnected() && IP == nullptr){
+        IP = WiFi.localIP().toString().c_str();
+        ESP_LOGI("WIFI", "Connected to %s", IP);
+    }
 }
 
 
 void WifiManager::onWiFiEvent(WiFiEvent_t event) {
     switch (event) {
         case ARDUINO_EVENT_WIFI_STA_CONNECTED:
-            ESP_LOGI("WIFI", "Connected to AP");
+            ESP_LOGI("WIFI", "Connected to AP: %s", WiFi.localIP().toString().c_str());
             break;
         case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
             ESP_LOGW("WIFI", "Disconnected from AP");
             break;
         case ARDUINO_EVENT_WIFI_AP_START:
-            ESP_LOGI("WIFI", "AP started");
+            ESP_LOGI("WIFI", "AP started: %s", WiFi.softAPIP().toString().c_str());
             break;
         case ARDUINO_EVENT_WIFI_AP_STOP:
             ESP_LOGI("WIFI", "AP stopped");
