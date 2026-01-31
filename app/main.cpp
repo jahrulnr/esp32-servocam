@@ -58,13 +58,13 @@ void setup() {
 
 	ESP32PWM::allocateTimer(0);
 	ESP32PWM::allocateTimer(1);
-	ESP32PWM::allocateTimer(2);
-	ESP32PWM::allocateTimer(4);
   xServo = new ServoControl(X_SERVO_PIN, 0, 180, DEFAULT_X_ANGLE);
   yServo = new ServoControl(Y_SERVO_PIN, 0, 180, DEFAULT_Y_ANGLE);
 	delay(1);
+	// low -> right, high -> left
   xServo->setAngle(DEFAULT_X_ANGLE+1); // trigger update
   delay(1);
+	// low -> up, high -> down
   yServo->setAngle(DEFAULT_Y_ANGLE+1); // trigger update
 
 	runTasks();

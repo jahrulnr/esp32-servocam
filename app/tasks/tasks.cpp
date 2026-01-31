@@ -15,7 +15,7 @@ void runTasks(){
 		.name = "handlerTask",
 		.task = handlerTask,
 		.stack = 3 * 1024,
-		.core = tskNO_AFFINITY,
+		.core = 0,
 		.priority = 6,
 		.suspendable = true,
 	});

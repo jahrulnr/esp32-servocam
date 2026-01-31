@@ -2,7 +2,10 @@
 #include <SpiJsonDocument.h>
 #include <web/router.h>
 #include "../service/ObjectDetectionService.h"
+#include "../handler/DetectionHandler.h"
 
+extern ServoControl* xServo;
+extern ServoControl* yServo;
 WebServer server(WEBSERVER_PORT);
 WebSocketsServer wsServer(WEBSOCKET_PORT);
 
@@ -44,43 +47,39 @@ void networkTask(void *param) {
 
 		static unsigned long lastFrameBroadcastTime = 0;
 		static unsigned long lastDetectionFeedTime = 0;
-		if (millis() - lastFrameBroadcastTime > 50 && wsClientsNum() > 0){
+
+		// Decide if we need to get a frame:
+		// - broadcast frames at ~20fps when there are WS clients
+		// - feed detector every ~1000ms regardless of WS clients
+		bool needBroadcast = (millis() - lastFrameBroadcastTime > 50) && (wsClientsNum() > 0);
+		bool needFeed = (millis() - lastDetectionFeedTime > 500);
+
+		if (needBroadcast || needFeed) {
 			auto frameBuffer = esp_camera_fb_get();
-			wsServer.broadcastBIN(frameBuffer->buf, frameBuffer->len);
-			// Try feeding object detection at a lower rate (e.g., every 1000ms)
-			if (millis() - lastDetectionFeedTime > 1000) {
-				// feed only if detector is not busy
-				objectDetectionService.feed(frameBuffer->buf, frameBuffer->len);
-				lastDetectionFeedTime = millis();
+			if (!frameBuffer) {
+				ESP_LOGW(TAG, "Failed to get camera frame");
+			} else {
+				if (needBroadcast) {
+					ESP_LOGI(TAG, "Broadcasting frame (clients=%d, len=%u)", wsClientsNum(), (unsigned)frameBuffer->len);
+					wsServer.broadcastBIN(frameBuffer->buf, frameBuffer->len);
+					lastFrameBroadcastTime = millis();
+				}
+
+				if (needFeed) {
+					// feed only if detector is not busy; feed() should return false if busy
+					if (objectDetectionService.feed(frameBuffer->buf, frameBuffer->len)) {
+						lastDetectionFeedTime = millis();
+					} else {
+						// if feed failed because busy, don't advance the timer so we'll retry next loop
+					}
+				}
+
+				esp_camera_fb_return(frameBuffer);
 			}
-			esp_camera_fb_return(frameBuffer);
-			lastFrameBroadcastTime = millis();
 		}
 
-		// If detection result ready, get and broadcast as JSON
-		if (objectDetectionService.isReady()) {
-			auto detectionResult = objectDetectionService.getResult();
-			SpiJsonDocument detectionJson;
-			detectionJson["type"] = "detections";
-			detectionJson["width"] = detectionResult.width;
-			detectionJson["height"] = detectionResult.height;
-			JsonArray detectionsArray = detectionJson.createNestedArray("detections");
-			for (auto &det : detectionResult.detections) {
-				SpiJsonDocument obj;
-				JsonArray box = obj.createNestedArray("box");
-				box.add(det.x1);
-				box.add(det.y1);
-				box.add(det.x2);
-				box.add(det.y2);
-				obj["confidence"] = det.confidence;
-				obj["oid"] = det.oid;
-				obj["classification"] = det.classification;
-				detectionsArray.add(obj);
-			}
-			String outTxt;
-			serializeJson(detectionJson, outTxt);
-			wsServer.broadcastTXT(outTxt);
-		}
+		// Delegate detection result handling to handler
+		handleDetections(objectDetectionService, wsServer, xServo, yServo);
 	} while(1);
 
 	WiFi.disconnect();

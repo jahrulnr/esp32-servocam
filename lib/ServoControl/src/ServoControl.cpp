@@ -1,7 +1,7 @@
 #include "ServoControl.h"
 
 ServoControl::ServoControl(int pin, int minAngle, int maxAngle, int defaultAngle, bool reverse)
-  : _attached(false), _updaterCallback(NULL), _stepSize(2), _stepDelayMs(10), _lastUpdate(0) {
+  : _attached(false), _updaterCallback(NULL), _stepSize(1), _stepDelayMs(12), _lastUpdate(0) {
   _servo.pin = pin;
 
   defaultAngle = constrain(defaultAngle, minAngle, maxAngle);
