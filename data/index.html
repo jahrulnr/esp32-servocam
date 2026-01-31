@@ -1,356 +1,460 @@
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>ESP-AI Web UI</title>
-	<link href="assets/bootstrap.min.css" rel="stylesheet">
-	<style>
-		[data-bs-theme="dark"] .navbar-brand {
-			color: #fff !important;
-		}
-		[data-bs-theme="dark"] .nav-link {
-			color: rgba(255, 255, 255, 0.55) !important;
-		}
-		[data-bs-theme="dark"] .card {
-			background-color: #343a40 !important;
-			border-color: #495057 !important;
-			color: #fff !important;
-		}
-		[data-bs-theme="dark"] .card-header {
-			background-color: #495057 !important;
-			border-color: #495057 !important;
-			color: #fff !important;
-		}
-		[data-bs-theme="dark"] body {
-			background-color: #212529 !important;
-			color: #fff !important;
-		}
-		[data-bs-theme="dark"] #logArea {
-			background-color: #343a40 !important;
-			color: #fff !important;
-			border-color: #495057 !important;
-		}
-		[data-bs-theme="dark"] #sidebar {
-			background-color: #343a40 !important;
-		}
-		[data-bs-theme="dark"] #sidebar .nav-link {
-			color: rgba(255, 255, 255, 0.75) !important;
-		}
-		[data-bs-theme="dark"] #sidebar .nav-link.active {
-			color: #fff !important;
-		}
-		/* Mobile responsiveness */
-		@media (max-width: 767.98px) {
-			#sidebar {
-				transform: translateX(-100%);
-				transition: transform 0.3s ease;
-			}
-			#sidebar.show {
-				transform: translateX(0);
-			}
-			.flex-fill {
-				margin-left: 0 !important;
-			}
-			body.overlay-open {
-				overflow: hidden;
-			}
-			body.overlay-open::after {
-				content: '';
-				position: fixed;
-				top: 0;
-			 	left: 0;
-				width: 100%;
-				height: 100%;
-				background: rgba(0,0,0,0.5);
-				z-index: 999;
-			}
-		}	
-	</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP-AI Web UI</title>
+  <link href="assets/bootstrap.min.css" rel="stylesheet">
+  <style>
+    [data-bs-theme="dark"] .navbar-brand {
+      color: #fff !important;
+    }
+    [data-bs-theme="dark"] .nav-link {
+      color: rgba(255, 255, 255, 0.55) !important;
+    }
+    [data-bs-theme="dark"] .card {
+      background-color: #343a40 !important;
+      border-color: #495057 !important;
+      color: #fff !important;
+    }
+    [data-bs-theme="dark"] .card-header {
+      background-color: #495057 !important;
+      border-color: #495057 !important;
+      color: #fff !important;
+    }
+    [data-bs-theme="dark"] body {
+      background-color: #212529 !important;
+      color: #fff !important;
+    }
+    [data-bs-theme="dark"] #logArea {
+      background-color: #343a40 !important;
+      color: #fff !important;
+      border-color: #495057 !important;
+    }
+    [data-bs-theme="dark"] #sidebar {
+      background-color: #343a40 !important;
+    }
+    [data-bs-theme="dark"] #sidebar .nav-link {
+      color: rgba(255, 255, 255, 0.75) !important;
+    }
+    [data-bs-theme="dark"] #sidebar .nav-link.active {
+      color: #fff !important;
+    }
+    /* Mobile responsiveness */
+    @media (max-width: 767.98px) {
+      #sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+      }
+      #sidebar.show {
+        transform: translateX(0);
+      }
+      .flex-fill {
+        margin-left: 0 !important;
+      }
+      body.overlay-open {
+        overflow: hidden;
+      }
+      body.overlay-open::after {
+        content: '';
+        position: fixed;
+        top: 0;
+         left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 999;
+      }
+    }	
+  </style>
 </head>
 <body class="py-md-5">
-	<div class="d-flex">
-		<!-- Sidebar -->
-		<div id="sidebar" class="bg-primary text-white" style="width: 250px; min-height: 100vh; position: fixed; left: 0; top: 0; z-index: 1000;">
-			<div class="p-3">
-				<h5 class="fw-bold mb-4">ESP-AI</h5>
-				<ul class="nav flex-column">
-					<li class="nav-item mb-2">
-						<a class="nav-link text-white active" id="nav-camera" href="#camera">
-						Camera
-						</a>
-					</li>
-					<li class="nav-item mb-2">
-						<a class="nav-link text-white" id="nav-log" href="#log">
-						Log
-						</a>
-					</li>
-					<li class="nav-item mt-auto mb-2">
-						<button class="btn btn-link nav-link text-white" id="themeToggle">
-							☀️
-						</button>
-					</li>
-				</ul>
-			</div>
-		</div>
+  <div class="d-flex">
+    <!-- Sidebar -->
+    <div id="sidebar" class="bg-primary text-white" style="width: 250px; min-height: 100vh; position: fixed; left: 0; top: 0; z-index: 1000;">
+      <div class="p-3">
+        <h5 class="fw-bold mb-4">ESP-AI</h5>
+        <ul class="nav flex-column">
+          <li class="nav-item mb-2">
+            <a class="nav-link text-white active" id="nav-camera" href="#camera">
+            Camera
+            </a>
+          </li>
+          <li class="nav-item mb-2">
+            <a class="nav-link text-white" id="nav-log" href="#log">
+            Log
+            </a>
+          </li>
+          <li class="nav-item mt-auto mb-2">
+            <button class="btn btn-link nav-link text-white" id="themeToggle">
+              ☀️
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
 
-		<!-- Main Content -->
-		<div class="flex-fill px-2 px-lg-3" style="margin-left: 250px;">
-			<!-- Mobile Header -->
-			<nav class="navbar navbar-light d-md-none">
-				<button class="btn btn-outline-secondary" type="button" id="sidebarToggle">
-					☰
-				</button>
-				<span class="navbar-brand mb-0 h1">ESP-AI</span>
-			</nav>
-			<div class="row justify-content-center">
-				<div class="col-lg-10">
-					<!-- Camera View -->
-					<div id="view-camera" class="view-content">
-						<div class="card shadow-sm border-0">
-							<div class="card-header bg-light p-2 p-lg-3">
-								<h2 class="h5 mb-0 text-light">Camera View</h2>
-							</div>
-							<div class="card-body text-center p-2 p-lg-3">
-								<div class="row align-items-center">
-									<div class="col-md-7 col-12 text-center mb-3 mb-md-0">
-										<img id="camera" src="" alt="Camera Feed" class="img-fluid rounded shadow-sm" style="max-width: 100%;">
-										<div class="mt-3">
-											<button id="fullscreenBtn" class="btn btn-outline-secondary me-2">
-												Fullscreen
-											</button>
-										</div>
-									</div>
-									<div class="col-md-5 col-12">
-										<div class="card border-0">
-											<div class="card-header small p-2">Servo Controls</div>
-											<div class="card-body p-2">
-												<div class="mb-3">
-													<label for="xSlider" class="form-label">Pan (X): <span id="xVal">90</span>°</label>
-													<input type="range" class="form-range" min="0" max="180" id="xSlider" value="90">
-												</div>
-												<div class="mb-3">
-													<label for="ySlider" class="form-label">Tilt (Y): <span id="yVal">90</span>°</label>
-													<input type="range" class="form-range" min="0" max="180" id="ySlider" value="90">
-												</div>
-												<div class="d-grid">
-													<button id="resetServos" class="btn btn-outline-secondary">Reset to 90°</button>
-												</div>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
+    <!-- Main Content -->
+    <div class="flex-fill px-2 px-lg-3" style="margin-left: 250px;">
+      <!-- Mobile Header -->
+      <nav class="navbar navbar-light d-md-none">
+        <button class="btn btn-outline-secondary" type="button" id="sidebarToggle">
+          ☰
+        </button>
+        <span class="navbar-brand mb-0 h1">ESP-AI</span>
+      </nav>
+      <div class="row justify-content-center">
+        <div class="col-lg-10">
+          <!-- Camera View -->
+          <div id="view-camera" class="view-content">
+            <div class="card shadow-sm border-0">
+              <div class="card-header bg-light p-2 p-lg-3">
+                <h2 class="h5 mb-0 text-light">Camera View</h2>
+              </div>
+              <div class="card-body text-center p-2 p-lg-3">
+                <div class="row align-items-center">
+                  <div class="col-md-7 col-12 text-center mb-3 mb-md-0">
+                    <div id="cameraWrapper" style="position: relative; display: inline-block;">
+                      <img id="camera" src="" alt="Camera Feed" class="img-fluid rounded shadow-sm" style="max-width: 100%; display: block;">
+                      <canvas id="overlay" style="position: absolute; left: 0; top: 0; pointer-events: none;"></canvas>
+                    </div>
+                    <div class="mt-3">
+                      <button id="fullscreenBtn" class="btn btn-outline-secondary me-2">
+                        Fullscreen
+                      </button>
+                    </div>
+                  </div>
+                  <div class="col-md-5 col-12">
+                    <div class="card border-0">
+                      <div class="card-header small p-2">Servo Controls</div>
+                      <div class="card-body p-2">
+                        <div class="mb-3">
+                          <label for="xSlider" class="form-label">Pan (X): <span id="xVal">90</span>°</label>
+                          <input type="range" class="form-range" min="0" max="180" id="xSlider" value="90">
+                        </div>
+                        <div class="mb-3">
+                          <label for="ySlider" class="form-label">Tilt (Y): <span id="yVal">90</span>°</label>
+                          <input type="range" class="form-range" min="0" max="180" id="ySlider" value="90">
+                        </div>
+                        <div class="d-grid">
+                          <button id="resetServos" class="btn btn-outline-secondary">Reset to 90°</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-					<!-- Log View -->
-					<div id="view-log" class="view-content d-none">
-						<div class="container-fluid mt-2 mt-lg-4">
-							<div class="row justify-content-center">
-								<div class="col-lg-10">
-									<div class="card shadow-sm border-0">
-										<div class="card-header bg-info text-white p-2 p-lg-3">
-											<h2 class="h5 mb-0">System Log</h2>
-										</div>
-										<div class="card-body p-2 p-lg-3">
-											<textarea id="logArea" class="form-control" rows="20" readonly style="font-family: monospace; font-size: 0.9em;"></textarea>
-											<div class="mt-3">
-												<button id="clearLogBtn" class="btn btn-outline-secondary">
-													Clear Log
-												</button>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
+          <!-- Log View -->
+          <div id="view-log" class="view-content d-none">
+            <div class="container-fluid mt-2 mt-lg-4">
+              <div class="row justify-content-center">
+                <div class="col-lg-10">
+                  <div class="card shadow-sm border-0">
+                    <div class="card-header bg-info text-white p-2 p-lg-3">
+                      <h2 class="h5 mb-0">System Log</h2>
+                    </div>
+                    <div class="card-body p-2 p-lg-3">
+                      <textarea id="logArea" class="form-control" rows="20" readonly style="font-family: monospace; font-size: 0.9em;"></textarea>
+                      <div class="mt-3">
+                        <button id="clearLogBtn" class="btn btn-outline-secondary">
+                          Clear Log
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-				</div>
-			</div>
-		</div>
+        </div>
+      </div>
+    </div>
 
-		<script src="assets/jquery.min.js"></script>
-		<script src="assets/bootstrap.bundle.js"></script>
-		<script>
-			$(document).ready(function() {
-				// Detect host
-				let hostname = globalThis.location.hostname;
-				let isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || /^192\.168\./.test(hostname) || /^10\.0\./.test(hostname) || /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname);
-				let port = 81;
-				let wsUrl;
-				if (isLocal) {
-					wsUrl = 'ws://' + hostname + ':' + port + '/ws';
-				} else {
-					wsUrl = '/ws';
-				}
+    <script src="assets/jquery.min.js"></script>
+    <script src="assets/bootstrap.bundle.js"></script>
+    <script>
+      $(document).ready(function() {
+        // Detect host
+        let hostname = globalThis.location.hostname;
+        let isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || /^192\.168\./.test(hostname) || /^10\.0\./.test(hostname) || /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname);
+        let port = 81;
+        let wsUrl;
+        if (isLocal) {
+          wsUrl = 'ws://' + hostname + ':' + port + '/ws';
+        } else {
+          wsUrl = '/ws';
+        }
 
-					// WebSocket connection (placeholder, backend later)
-					let ws;
-					let prevObjectUrl = null; // last created blob URL for camera frame
-				function connectWS() {
-					ws = new WebSocket(wsUrl);
-					ws.onopen = function() {
-						console.log('WebSocket connected to', wsUrl);
-						$('#simulateBtn').hide(); // Hide simulate button when connected
-						// Send ping periodically
-						setInterval(function() {
-							ws.send(JSON.stringify({type: 'ping'}));
-						}, 5000);
-					};
-					ws.onmessage = function(event) {
-						if (typeof event.data === 'string') {
-							var msg = JSON.parse(event.data);
-							if (msg.type === 'pong') {
-								// Handle pong
-							} else if (msg.type === 'log') {
-								logMessage(`[${msg.level.toUpperCase()}] ${msg.message}`);
-							}
-						} else {
-							// Assume binary camera data -> use Blob URL to avoid growing memory from base64 strings
-							const img = document.getElementById('camera');
-							const objectUrl = URL.createObjectURL(event.data);
-							img.onload = function() {
-								// Revoke previous URL to free memory
-								if (prevObjectUrl) {
-									URL.revokeObjectURL(prevObjectUrl);
-								}
-								prevObjectUrl = objectUrl;
-								img.onload = null;
-							};
-							img.src = objectUrl;
-						}
-					};
-					ws.onclose = function() {
-						console.log('WebSocket disconnected, reconnecting...');
-						$('#simulateBtn').show(); // Show simulate button when disconnected
-						setTimeout(connectWS, 1000);
-					};
-				}
-				if (globalThis.location.protocol !== 'file:') {
-					connectWS(); // Only connect when served over HTTP/HTTPS
-				}
+          // WebSocket connection (placeholder, backend later)
+          let ws;
+          let prevObjectUrl = null; // last created blob URL for camera frame
+        function connectWS() {
+          ws = new WebSocket(wsUrl);
+          ws.onopen = function() {
+            console.log('WebSocket connected to', wsUrl);
+            $('#simulateBtn').hide(); // Hide simulate button when connected
+            // Send ping periodically
+            setInterval(function() {
+              ws.send(JSON.stringify({type: 'ping'}));
+            }, 5000);
+          };
+          ws.onmessage = function(event) {
+            if (typeof event.data === 'string') {
+              var msg = JSON.parse(event.data);
+              if (msg.type === 'pong') {
+                // Handle pong
+              } else if (msg.type === 'log') {
+                logMessage(`[${msg.level.toUpperCase()}] ${msg.message}`);
+                } else if (msg.type === 'detections') {
+                  // Draw detections on overlay canvas
+                  try {
+                    drawDetections(msg);
+                  } catch (e) {
+                    console.error('drawDetections error', e);
+                  }
+              }
+            } else {
+              // Assume binary camera data -> use Blob URL to avoid growing memory from base64 strings
+              const img = document.getElementById('camera');
+              const objectUrl = URL.createObjectURL(event.data);
+              // Use a one-time load listener to revoke the previous URL once the new image is ready
+              const onLoadRevoke = function() {
+                try { if (prevObjectUrl) URL.revokeObjectURL(prevObjectUrl); } catch(e) {}
+                prevObjectUrl = objectUrl;
+                img.removeEventListener('load', onLoadRevoke);
+                // ensure overlay matches new image size
+                try { adjustOverlaySize(); } catch(e) {}
+              };
+              img.addEventListener('load', onLoadRevoke);
+              img.src = objectUrl;
+            }
+          };
+          ws.onclose = function() {
+            console.log('WebSocket disconnected, reconnecting...');
+            $('#simulateBtn').show(); // Show simulate button when disconnected
+            setTimeout(connectWS, 1000);
+          };
+        }
+        if (globalThis.location.protocol !== 'file:') {
+          connectWS(); // Only connect when served over HTTP/HTTPS
+        }
 
-				function updateChart(chart, values) {
-					dataCounter++;
-					chart.data.forEach(function(series, index) {
-						if (values[index] !== undefined) {
-							series.dataPoints.push({ x: dataCounter, y: values[index] });
-							if (series.dataPoints.length > maxPoints) {
-								series.dataPoints.shift();
-							}
-						}
-					});
-					chart.render();
-				}
+        $('#fullscreenBtn').click(function() {
+          const img = document.getElementById('camera');
+          if (document.fullscreenElement) {
+            document.exitFullscreen();
+          } else {
+            img.requestFullscreen().catch(err => {
+              console.error('Error attempting to enable fullscreen:', err);
+            });
+          }
+        });
 
-				$('#fullscreenBtn').click(function() {
-					const img = document.getElementById('camera');
-					if (document.fullscreenElement) {
-						document.exitFullscreen();
-					} else {
-						img.requestFullscreen().catch(err => {
-							console.error('Error attempting to enable fullscreen:', err);
-						});
-					}
-				});
+        $('#sidebarToggle').click(function() {
+          $('#sidebar').toggleClass('show');
+          $('body').toggleClass('overlay-open');
+        });
 
-				$('#sidebarToggle').click(function() {
-					$('#sidebar').toggleClass('show');
-					$('body').toggleClass('overlay-open');
-				});
+        // Close sidebar when clicking outside on mobile
+        $(document).on('click', function(e) {
+          if ($(globalThis).width() < 768 && $('body').hasClass('overlay-open') && !$(e.target).closest('#sidebar').length && !$(e.target).closest('#sidebarToggle').length) {
+            $('#sidebar').removeClass('show');
+            $('body').removeClass('overlay-open');
+          }
+        });
 
-				// Close sidebar when clicking outside on mobile
-				$(document).on('click', function(e) {
-					if ($(globalThis).width() < 768 && $('body').hasClass('overlay-open') && !$(e.target).closest('#sidebar').length && !$(e.target).closest('#sidebarToggle').length) {
-						$('#sidebar').removeClass('show');
-						$('body').removeClass('overlay-open');
-					}
-				});
+        $('#nav-camera').click(function(e) {
+          e.preventDefault();
+          $('.view-content').addClass('d-none');
+          $('#view-camera').removeClass('d-none');
+          $('#sidebar .nav-link').removeClass('active');
+          $(this).addClass('active');
+        });
+        $('#nav-log').click(function(e) {
+          e.preventDefault();
+          $('.view-content').addClass('d-none');
+          $('#view-log').removeClass('d-none');
+          $('#sidebar .nav-link').removeClass('active');
+          $(this).addClass('active');
+        });
 
-				$('#nav-camera').click(function(e) {
-					e.preventDefault();
-					$('.view-content').addClass('d-none');
-					$('#view-camera').removeClass('d-none');
-					$('#sidebar .nav-link').removeClass('active');
-					$(this).addClass('active');
-				});
-				$('#nav-log').click(function(e) {
-					e.preventDefault();
-					$('.view-content').addClass('d-none');
-					$('#view-log').removeClass('d-none');
-					$('#sidebar .nav-link').removeClass('active');
-					$(this).addClass('active');
-				});
+        $('#themeToggle').click(function() {
+          const html = document.documentElement;
+          const body = document.body;
+          const currentTheme = html.dataset('data-bs-theme');
+          const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+          html.dataset('data-bs-theme', newTheme);
+          body.dataset('data-bs-theme', newTheme);
+          $(this).text(newTheme === 'dark' ? '☀️' : '🌙');
+        });
 
-				$('#themeToggle').click(function() {
-					const html = document.documentElement;
-					const body = document.body;
-					const currentTheme = html.dataset('data-bs-theme');
-					const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-					html.dataset('data-bs-theme', newTheme);
-					body.dataset('data-bs-theme', newTheme);
-					$(this).text(newTheme === 'dark' ? '☀️' : '🌙');
-				});
+        // Log function
+        function logMessage(message) {
+          const timestamp = new Date().toLocaleTimeString();
+          $('#logArea').append(`[${timestamp}] ${message}\n`);
+          // Limit to 1000 lines
+          let lines = $('#logArea').val().split('\n');
+          if (lines.length > 1000) {
+            lines = lines.slice(-1000);
+            $('#logArea').val(lines.join('\n'));
+          }
+          $('#logArea').scrollTop($('#logArea')[0].scrollHeight);
+        }
 
-				// Log function
-				function logMessage(message) {
-					const timestamp = new Date().toLocaleTimeString();
-					$('#logArea').append(`[${timestamp}] ${message}\n`);
-					// Limit to 1000 lines
-					let lines = $('#logArea').val().split('\n');
-					if (lines.length > 1000) {
-						lines = lines.slice(-1000);
-						$('#logArea').val(lines.join('\n'));
-					}
-					$('#logArea').scrollTop($('#logArea')[0].scrollHeight);
-				}
+        $('#clearLogBtn').click(function() {
+          $('#logArea').val('');
+        });
 
-				$('#clearLogBtn').click(function() {
-					$('#logArea').val('');
-				});
+        function sendServo(axis, angle){
+          const payload = JSON.stringify({ type: 'servo', axis: axis, angle: angle });
+          if (ws && ws.readyState === WebSocket.OPEN){
+            ws.send(payload);
+          } else {
+            logMessage('[WARN] WebSocket not connected - cannot send servo');
+          }
+        }
 
-					// Servo slider -> send via WebSocket (debounced)
-					function debounce(fn, wait){
-						let t = null;
-						return function(){
-							const args = arguments;
-							clearTimeout(t);
-							t = setTimeout(function(){ fn.apply(null, args); }, wait);
-						}
-					}
+        // Servo slider -> send via WebSocket (debounced)
+        function debounce(fn, wait){
+          let t = null;
+          return function(){
+            const args = arguments;
+            clearTimeout(t);
+            t = setTimeout(function(){ fn.apply(null, args); }, wait);
+          }
+        }
 
-					function sendServo(axis, angle){
-						const payload = JSON.stringify({ type: 'servo', axis: axis, angle: angle });
-						if (ws && ws.readyState === WebSocket.OPEN){
-							ws.send(payload);
-						} else {
-							logMessage('[WARN] WebSocket not connected - cannot send servo');
-						}
-					}
+        const sendServoDebounced = debounce(function(axis, angle){ sendServo(axis, angle); }, 60);
 
-					const sendServoDebounced = debounce(function(axis, angle){ sendServo(axis, angle); }, 60);
+        $('#xSlider').on('input change', function(){
+          const v = $(this).val();
+          $('#xVal').text(v);
+          sendServoDebounced('x', Number.parseInt(v));
+        });
+        $('#ySlider').on('input change', function(){
+          const v = $(this).val();
+          $('#yVal').text(v);
+          sendServoDebounced('y', Number.parseInt(v));
+        });
 
-					$('#xSlider').on('input change', function(){
-						const v = $(this).val();
-						$('#xVal').text(v);
-						sendServoDebounced('x', parseInt(v));
-					});
-					$('#ySlider').on('input change', function(){
-						const v = $(this).val();
-						$('#yVal').text(v);
-						sendServoDebounced('y', parseInt(v));
-					});
+        $('#resetServos').click(function(){
+          $('#xSlider').val(90).trigger('input');
+          $('#ySlider').val(90).trigger('input');
+          sendServo('x', 90);
+          sendServo('y', 90);
+        });
 
-					$('#resetServos').click(function(){
-						$('#xSlider').val(90).trigger('input');
-						$('#ySlider').val(90).trigger('input');
-						sendServo('x', 90);
-						sendServo('y', 90);
-					});
-			});
-		</script>
-	</div>
+        // Overlay drawing utilities for detections
+        const cameraImg = document.getElementById('camera');
+        const overlay = document.getElementById('overlay');
+        // keep overlay above the image
+        overlay.style.zIndex = 10;
+        cameraImg.style.zIndex = 1;
+
+        function adjustOverlaySize() {
+          if (!cameraImg || !overlay) return;
+          const rect = cameraImg.getBoundingClientRect();
+          // ignore transient tiny sizes during rapid updates
+          if (rect.width < 2 || rect.height < 2) return;
+          overlay.width = Math.round(rect.width);
+          overlay.height = Math.round(rect.height);
+          overlay.style.width = rect.width + 'px';
+          overlay.style.height = rect.height + 'px';
+          overlay.style.left = cameraImg.offsetLeft + 'px';
+          overlay.style.top = cameraImg.offsetTop + 'px';
+          // redraw last detections if present
+          if (lastDetections) renderDetections(lastDetections);
+        }
+
+        window.addEventListener('resize', function(){
+          adjustOverlaySize();
+        });
+
+        // when camera image updates call adjust
+        cameraImg.addEventListener('load', function(){
+          adjustOverlaySize();
+        });
+
+        // keep last detections for a short persistence window
+        let lastDetections = null;
+        let lastDetectionsTimestamp = 0;
+        const DETECTION_PERSIST_MS = 1000;
+
+        function clearOverlay() {
+          if (!overlay) return;
+          const ctx = overlay.getContext('2d');
+          ctx.clearRect(0,0,overlay.width, overlay.height);
+        }
+
+        function renderDetections(message) {
+          // message: { type: 'detections', width, height, detections: [...] }
+          if (!overlay || !cameraImg) return;
+          const ctx = overlay.getContext('2d');
+          ctx.clearRect(0,0,overlay.width, overlay.height);
+
+          const frameW = message.width || 1;
+          const frameH = message.height || 1;
+          const dispW = overlay.width;
+          const dispH = overlay.height;
+
+          const scaleX = dispW / frameW;
+          const scaleY = dispH / frameH;
+
+          ctx.lineWidth = Math.max(2, Math.round(Math.min(dispW, dispH) * 0.004));
+          ctx.font = `${Math.max(12, Math.round(dispH * 0.04))}px sans-serif`;
+
+          if (!message.detections) return;
+          for (let i=0;i<message.detections.length;i++){
+            const det = message.detections[i];
+            const box = det.box || det["box"] || [];
+            if (box.length < 4) continue;
+            const x1 = box[0]*scaleX;
+            const y1 = box[1]*scaleY;
+            const x2 = box[2]*scaleX;
+            const y2 = box[3]*scaleY;
+            const w = x2 - x1;
+            const h = y2 - y1;
+
+            // color per class index (det.oid) fallback
+            const hue = (det.oid ? (det.oid*47) % 360 : (i*53)%360);
+            ctx.strokeStyle = `hsl(${hue} 100% 50%)`;
+            ctx.fillStyle = `hsla(${hue} 100% 50% / 0.15)`;
+            ctx.fillRect(x1, y1, w, h);
+            ctx.strokeRect(x1, y1, w, h);
+
+            // label
+            const label = (det.classification ? det.classification : 'obj') + (det.confidence ? ` ${Math.round(det.confidence*100)}%` : '');
+            const textWidth = ctx.measureText(label).width;
+            const pad = 6;
+            const labelX = x1;
+            const labelY = Math.max(0, y1 - Math.round(Math.max(14, overlay.height*0.03)) );
+            ctx.fillStyle = `hsl(${hue} 100% 50%)`;
+            ctx.fillRect(labelX, labelY, textWidth + pad, Math.round(overlay.height*0.05) + 4);
+            ctx.fillStyle = '#fff';
+            ctx.fillText(label, labelX + (pad/2), labelY + Math.round(overlay.height*0.035) + 2);
+          }
+        }
+
+        function drawDetections(message) {
+          // store detections and timestamp, render immediately
+          lastDetections = message;
+          lastDetectionsTimestamp = Date.now();
+          renderDetections(lastDetections);
+        }
+
+        // periodic invalidation: keep last detections until DETECTION_PERSIST_MS elapsed
+        setInterval(function(){
+          if (lastDetections && (Date.now() - lastDetectionsTimestamp) > DETECTION_PERSIST_MS) {
+            lastDetections = null;
+            clearOverlay();
+          }
+        }, 50);
+      });
+    </script>
+  </div>
 </body>
 </html>

@@ -15,6 +15,3 @@
 #include <soc/rtc_cntl_reg.h>
 #include <ESP32PWM.h>
 #include <ServoControl.h>
-
-extern ServoControl* xServo;
-extern ServoControl* yServo;

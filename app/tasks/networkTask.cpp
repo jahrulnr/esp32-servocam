@@ -1,12 +1,17 @@
 #include "tasks.h"
 #include <SpiJsonDocument.h>
 #include <web/router.h>
+#include "../service/ObjectDetectionService.h"
 
 WebServer server(WEBSERVER_PORT);
 WebSocketsServer wsServer(WEBSOCKET_PORT);
 
 void networkTask(void *param) {
 	const char* TAG = "networkTask";
+
+	// Object detection service
+	static ObjectDetectionService objectDetectionService;
+	objectDetectionService.init();
 
 	TickType_t updateFrequency = 51;
 	unsigned long monitorCheck = millis();
@@ -37,12 +42,44 @@ void networkTask(void *param) {
 		wsServer.loop();
 		if (!wifiManager.isConnected()) continue;
 
-		static unsigned long sendImage = 0;
-		if (millis() - sendImage > 50 && wsClientsNum() > 0){
-			auto fb = esp_camera_fb_get();
-			wsServer.broadcastBIN(fb->buf, fb->len);
-			esp_camera_fb_return(fb);
-			sendImage = millis();
+		static unsigned long lastFrameBroadcastTime = 0;
+		static unsigned long lastDetectionFeedTime = 0;
+		if (millis() - lastFrameBroadcastTime > 50 && wsClientsNum() > 0){
+			auto frameBuffer = esp_camera_fb_get();
+			wsServer.broadcastBIN(frameBuffer->buf, frameBuffer->len);
+			// Try feeding object detection at a lower rate (e.g., every 1000ms)
+			if (millis() - lastDetectionFeedTime > 1000) {
+				// feed only if detector is not busy
+				objectDetectionService.feed(frameBuffer->buf, frameBuffer->len);
+				lastDetectionFeedTime = millis();
+			}
+			esp_camera_fb_return(frameBuffer);
+			lastFrameBroadcastTime = millis();
+		}
+
+		// If detection result ready, get and broadcast as JSON
+		if (objectDetectionService.isReady()) {
+			auto detectionResult = objectDetectionService.getResult();
+			SpiJsonDocument detectionJson;
+			detectionJson["type"] = "detections";
+			detectionJson["width"] = detectionResult.width;
+			detectionJson["height"] = detectionResult.height;
+			JsonArray detectionsArray = detectionJson.createNestedArray("detections");
+			for (auto &det : detectionResult.detections) {
+				SpiJsonDocument obj;
+				JsonArray box = obj.createNestedArray("box");
+				box.add(det.x1);
+				box.add(det.y1);
+				box.add(det.x2);
+				box.add(det.y2);
+				obj["confidence"] = det.confidence;
+				obj["oid"] = det.oid;
+				obj["classification"] = det.classification;
+				detectionsArray.add(obj);
+			}
+			String outTxt;
+			serializeJson(detectionJson, outTxt);
+			wsServer.broadcastTXT(outTxt);
 		}
 	} while(1);
 

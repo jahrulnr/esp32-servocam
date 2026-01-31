@@ -15,9 +15,6 @@ void init() {
 }
 
 void setup() {
-  ai.init(GPT_API_KEY);
-  ai.setSystemMessage(GPT_SYSTEM_MESSAGE);
-
 	#ifdef ESP32
 		WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 	#endif
@@ -61,8 +58,10 @@ void setup() {
 
 	ESP32PWM::allocateTimer(0);
 	ESP32PWM::allocateTimer(1);
-  xServo = new ServoControl(X_SERVO_PIN, 60, 120, DEFAULT_X_ANGLE);
-  yServo = new ServoControl(Y_SERVO_PIN, 0, 60, DEFAULT_Y_ANGLE);
+	ESP32PWM::allocateTimer(2);
+	ESP32PWM::allocateTimer(4);
+  xServo = new ServoControl(X_SERVO_PIN, 0, 180, DEFAULT_X_ANGLE);
+  yServo = new ServoControl(Y_SERVO_PIN, 0, 180, DEFAULT_Y_ANGLE);
 	delay(1);
   xServo->setAngle(DEFAULT_X_ANGLE+1); // trigger update
   delay(1);

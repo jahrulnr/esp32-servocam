@@ -8,6 +8,8 @@
 
 extern WebServer server;
 extern WebSocketsServer wsServer;
+extern ServoControl* xServo;
+extern ServoControl* yServo;
 
 static int clientNum = 0;
 inline int wsClientsNum() { return clientNum; }
