@@ -8,7 +8,7 @@ void runTasks(){
 		.task = networkTask,
 		.stack = 4 * 1024,
 		.core = 1,
-		.priority = 0,
+		.priority = 4,
 		.suspendable = true,
 	});
 	createTask(new BackgroundTask{
@@ -16,7 +16,7 @@ void runTasks(){
 		.task = handlerTask,
 		.stack = 3 * 1024,
 		.core = 0,
-		.priority = 6,
+		.priority = 2,
 		.suspendable = true,
 	});
 	createTask(new BackgroundTask{
