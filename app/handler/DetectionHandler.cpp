@@ -296,7 +296,9 @@ void handleDetections(ObjectDetectionService &objectDetectionService, WebSockets
     }
 #endif
 
-    String outTxt;
-    serializeJson(detectionJson, outTxt);
-    wsServer.broadcastTXT(outTxt);
+    if(detectionResult.width >0){
+        String outTxt;
+        serializeJson(detectionJson, outTxt);
+        wsServer.broadcastTXT(outTxt);
+    }
 }

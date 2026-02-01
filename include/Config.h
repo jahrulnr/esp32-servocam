@@ -15,7 +15,7 @@
 #define OBJECT_DETECTION_URL "http://192.168.18.250:8080/predict"
 
 // Awareness context: when no object detected, perform grid-search sweep
-#define ENABLE_AWARENESS_CONTEXT 1
+#define ENABLE_AWARENESS_CONTEXT 0
 
 // Awareness grid settings
 #define AWARENESS_GRID_ROWS 3
