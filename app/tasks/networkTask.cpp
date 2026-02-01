@@ -45,9 +45,9 @@ void networkTask(void *param) {
 
 		// Decide if we need to get a frame:
 		// - broadcast frames at ~20fps when there are WS clients
-		// - feed detector every ~300ms regardless of WS clients
+		// - feed detector every ~500ms regardless of WS clients
 		bool needBroadcast = (millis() - lastFrameBroadcastTime > 50) && (wsClientsNum() > 0);
-		bool needFeed = (millis() - lastDetectionFeedTime > 300);
+		bool needFeed = (millis() - lastDetectionFeedTime > 500);
 
 		if (needBroadcast || needFeed) {
 			auto frameBuffer = esp_camera_fb_get();

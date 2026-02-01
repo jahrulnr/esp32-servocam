@@ -51,7 +51,6 @@ void handleDetections(ObjectDetectionService &objectDetectionService, WebSockets
         auto &best = detectionResult.detections[bestIdx];
         float centerX = (best.x1 + best.x2) * 0.5f;
         float centerY = (best.y1 + best.y2) * 0.5f;
-        // simple: use current bbox center (no predictor)
         int angleX = 90; // fallback
         int angleY = 90;
 
@@ -63,7 +62,7 @@ void handleDetections(ObjectDetectionService &objectDetectionService, WebSockets
 
 
         // Additional center deadzone (in pixels) to avoid oscillation when object is near center
-        const float CENTER_DEAD_FRAC = 0.08f; // 4% of image dimension
+        const float CENTER_DEAD_FRAC = 0.08f; // % of image dimension
         const int centerDeadX = (int)(detectionResult.width * CENTER_DEAD_FRAC);
         int centerDeadY = (int)(detectionResult.height * CENTER_DEAD_FRAC);
 
@@ -209,7 +208,12 @@ void handleDetections(ObjectDetectionService &objectDetectionService, WebSockets
     bool allowAwareness = false;
     unsigned long now_check = millis();
 #if ENABLE_OBJECT_DETECTION
-    if (lastDetectionT > 0 && now_check - lastDetectionT >= 30000UL) allowAwareness = true;
+    // If we have never seen any detection yet, allow awareness immediately.
+    if (lastDetectionT == 0) {
+        allowAwareness = true;
+    } else if (now_check - lastDetectionT >= 30000UL) {
+        allowAwareness = true;
+    }
 #else
     // object detection disabled -> allow awareness immediately
     allowAwareness = true;
