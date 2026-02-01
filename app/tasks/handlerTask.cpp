@@ -5,7 +5,7 @@ extern ServoControl* yServo;
 
 void handlerTask(void* param) {
 	TickType_t updateFrequency = 1;
-	const unsigned long INACTIVITY_MS = 10000UL; // 10 seconds
+	const unsigned long INACTIVITY_MS = 30000UL;
 
 	do{
 		vTaskDelay(updateFrequency);
