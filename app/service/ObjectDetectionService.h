@@ -35,7 +35,7 @@ public:
     ~ObjectDetectionService();
 
     // Initialize with backend URL
-    bool init(const String& backendUrl = "http://192.168.18.250:8080/predict");
+    bool init(const String& backendUrl = "http://192.168.18.81:8080/predict");
 
     // Feed image data for prediction (non-blocking)
     bool feed(const uint8_t* imageData, size_t size);

@@ -64,7 +64,7 @@ void ObjectDetectionService::doPredict(uint8_t* imageData, size_t size) {
     ESP_LOGD(TAG(), "Starting prediction task");
 
     _http.begin(_backendUrl);
-    _http.setReuse(false);
+    _http.setReuse(true);
     _http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
     _http.setTimeout(30000); // 30 second timeout
 

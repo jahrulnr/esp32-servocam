@@ -1,17 +1,8 @@
 #include "DetectionHandler.h"
 #include <Arduino.h>
-#include "../rl/RLAgent.h"
 
 void handleDetections(ObjectDetectionService &objectDetectionService, WebSocketsServer &wsServer, ServoControl* xServo, ServoControl* yServo) {
     if (!objectDetectionService.isReady()) return;
-
-    // initialize RL agent once
-    static rl::RLAgent agent;
-    static bool rlInited = false;
-    static int prev_sx = -1, prev_sy = -1, prev_action = -1;
-    static float prev_err_mag = 0.0f;
-    static int saveCounter = 0;
-    if (!rlInited) { agent.begin(); rlInited = true; }
 
     auto detectionResult = objectDetectionService.getResult();
     SpiJsonDocument detectionJson;
@@ -26,10 +17,6 @@ void handleDetections(ObjectDetectionService &objectDetectionService, WebSockets
     for (size_t i = 0; i < detectionResult.detections.size(); ++i) {
         auto &det = detectionResult.detections[i];
         float conf = det.confidence;
-        if (det.classification == "person") {
-            conf += 0.2f; // khusus person, tambahkan 0.2
-            if (conf > 1.0f) conf = 1.0f;
-        }
         if (conf > bestConf) {
             bestConf = conf;
             bestIdx = i;
@@ -53,17 +40,19 @@ void handleDetections(ObjectDetectionService &objectDetectionService, WebSockets
         auto &best = detectionResult.detections[bestIdx];
         float centerX = (best.x1 + best.x2) * 0.5f;
         float centerY = (best.y1 + best.y2) * 0.5f;
+        // simple: use current bbox center (no predictor)
         int angleX = 90; // fallback
         int angleY = 90;
 
         // compute error in "degrees" relative to center (for RL discretization)
+        // use current center for error computation
         float errDegX = ((centerX - (detectionResult.width / 2.0f)) / (float)max(1, detectionResult.width)) * 180.0f;
         float errDegY = ((centerY - (detectionResult.height / 2.0f)) / (float)max(1, detectionResult.height)) * 180.0f;
         float cur_err_mag = sqrt(errDegX * errDegX + errDegY * errDegY);
 
 
         // Additional center deadzone (in pixels) to avoid oscillation when object is near center
-        const float CENTER_DEAD_FRAC = 0.04f; // 4% of image dimension
+        const float CENTER_DEAD_FRAC = 0.08f; // 4% of image dimension
         const int centerDeadX = (int)(detectionResult.width * CENTER_DEAD_FRAC);
         int centerDeadY = (int)(detectionResult.height * CENTER_DEAD_FRAC);
 
@@ -73,6 +62,7 @@ void handleDetections(ObjectDetectionService &objectDetectionService, WebSockets
 
         if (detectionResult.width > 0 && detectionResult.height > 0) {
             // Normalize image coordinates to 0..180 range for better precision
+            // normalize center to 0..180 range
             float normX = (centerX / detectionResult.width) * 180.0f; // 0..180 left->right
             float normY = (centerY / detectionResult.height) * 180.0f; // 0..180 top->bottom
 
@@ -84,8 +74,11 @@ void handleDetections(ObjectDetectionService &objectDetectionService, WebSockets
             if (emaY < 0) emaY = normY; else emaY = EMA_ALPHA * normY + (1.0f - EMA_ALPHA) * emaY;
 
             // For X, we want low image X -> right (high angle), high image X -> left (low angle)
-            angleX = (int)round(180.0f - emaX);
-            angleY = (int)round(emaY);
+            int rawAngleX = (int)round(180.0f - emaX);
+            int rawAngleY = (int)round(emaY);
+            // use raw target angle (EMA already smooths jitter). No partial-target reduction.
+            angleX = rawAngleX;
+            angleY = rawAngleY;
 
             // compute bbox size in pixels
             boxW = (int)(best.x2 - best.x1);
@@ -128,58 +121,27 @@ void handleDetections(ObjectDetectionService &objectDetectionService, WebSockets
         if ( (float)boxH / (float)max(1, detectionResult.height) < 0.08f) {
             centerDeadY = max(1, centerDeadY / 2);
         }
-        // --- RL: compute reward for previous action (if any) using new observation ---
-        int sx, sy;
-        agent.discretize(errDegX, errDegY, sx, sy);
 
+        // Simple proportional controller: compute target angles, but limit per-frame step
         int imgCenterX = detectionResult.width / 2;
         int imgCenterY = detectionResult.height / 2;
         bool inCenter = (abs((int)centerX - imgCenterX) <= centerDeadX) && (abs((int)centerY - imgCenterY) <= centerDeadY);
 
-        if (inCenter) {
-            // If we are in center deadzone, reward previous action (if any) and skip selecting a new RL action
-            if (prev_action >= 0 && prev_sx >= 0) {
-                agent.update(prev_sx, prev_sy, prev_action, sx, sy, 1.0f);
-                if (++saveCounter >= 50) { agent.save(); saveCounter = 0; }
-                prev_action = -1; prev_sx = -1; prev_sy = -1; // reset previous action to avoid double-reward
-            }
-            // skip action selection so servos won't be moved by RL when already centered
-            // fallthrough to normal centering/hysteresis code (which will avoid movement because inCenter)
-            // (we still serialize detections below)
-        } else {
-            if (prev_action >= 0 && prev_sx >= 0) {
-                // reward: if error decreased -> positive, if increased -> negative
-                const float TOL = 2.0f; // degrees tolerance
-                float reward = 0.0f;
-                if (cur_err_mag <= prev_err_mag - TOL) reward = 1.0f;
-                else if (cur_err_mag >= prev_err_mag + TOL) reward = -0.5f;
-                else reward = 0.0f;
-                agent.update(prev_sx, prev_sy, prev_action, sx, sy, reward);
-                // periodic save
-                if (++saveCounter >= 50) { agent.save(); saveCounter = 0; }
-            }
-
-            // select new action from agent (epsilon-greedy)
-        }
-
-        int action = -1;
-        if (!inCenter) action = agent.selectAction(sx, sy, 0.15f);
-        // map action to small servo adjustments
-        const int STEP_DEG = 6;
+        const int MAX_STEP_DEG = 6;
         int curServoX = xServo ? xServo->getAngle() : 90;
         int curServoY = yServo ? yServo->getAngle() : 90;
-        int targetX = angleX; // default move toward computed target
-        int targetY = angleY;
-        switch (action) {
-            case 0: targetX = constrain(curServoX - STEP_DEG, 0, 180); break; // left
-            case 1: targetX = constrain(curServoX + STEP_DEG, 0, 180); break; // right
-            case 2: targetY = constrain(curServoY - STEP_DEG, 0, 180); break; // up
-            case 3: targetY = constrain(curServoY + STEP_DEG, 0, 180); break; // down
-            case 4: /* stay */ break;
-        }
+        int targetX = curServoX;
+        int targetY = curServoY;
+        if (!inCenter) {
+            // angleX/angleY computed from EMA map to desired absolute angles
+            int dx = angleX - curServoX;
+            if (abs(dx) > MAX_STEP_DEG) targetX = curServoX + (dx > 0 ? MAX_STEP_DEG : -MAX_STEP_DEG);
+            else targetX = angleX;
 
-        // store for next update
-        prev_sx = sx; prev_sy = sy; prev_action = action; prev_err_mag = cur_err_mag;
+            int dy = angleY - curServoY;
+            if (abs(dy) > MAX_STEP_DEG) targetY = curServoY + (dy > 0 ? MAX_STEP_DEG : -MAX_STEP_DEG);
+            else targetY = angleY;
+        }
 
         // Ignore movement if bounding box is too close to edges
         const float EDGE_FRAC = 0.03f; // 3% margin

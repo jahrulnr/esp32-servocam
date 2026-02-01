@@ -1,3 +1,6 @@
 [submodule "model/esp-dl"]
 	path = model/esp-dl
 	url = https://github.com/espressif/esp-dl
+[submodule "backend"]
+	path = backend
+	url = https://github.com/jahrulnr/ai-server.git
