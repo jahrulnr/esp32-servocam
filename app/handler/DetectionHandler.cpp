@@ -1,10 +1,16 @@
 #include "DetectionHandler.h"
 #include <Arduino.h>
+#include "Config.h"
 
 void handleDetections(ObjectDetectionService &objectDetectionService, WebSocketsServer &wsServer, ServoControl* xServo, ServoControl* yServo) {
-    if (!objectDetectionService.isReady()) return;
-
-    auto detectionResult = objectDetectionService.getResult();
+    // Allow awareness/search even when detector isn't ready.
+    ObjectDetectionService::ObjectDetectionResult detectionResult;
+    if (objectDetectionService.isReady()) {
+        detectionResult = objectDetectionService.getResult();
+    } else {
+        // leave detectionResult empty (width/height == 0)
+        // awareness maps grid directly to servo range when dims unavailable
+    }
     SpiJsonDocument detectionJson;
     detectionJson["type"] = "detections";
     detectionJson["width"] = detectionResult.width;
@@ -14,6 +20,7 @@ void handleDetections(ObjectDetectionService &objectDetectionService, WebSockets
     // Find detection with highest (possibly adjusted) confidence
     float bestConf = -1.0f;
     int bestIdx = -1;
+#if ENABLE_OBJECT_DETECTION
     for (size_t i = 0; i < detectionResult.detections.size(); ++i) {
         auto &det = detectionResult.detections[i];
         float conf = det.confidence;
@@ -34,6 +41,10 @@ void handleDetections(ObjectDetectionService &objectDetectionService, WebSockets
         obj["classification"] = det.classification;
         detectionsArray.add(obj);
     }
+#else
+    // object detection disabled for testing — leave detectionsArray empty and force search
+    bestIdx = -1;
+#endif
 
     // If we found a best detection, optionally use RL to select an action and move servos
     if (bestIdx >= 0 && bestIdx < (int)detectionResult.detections.size()) {
@@ -186,6 +197,100 @@ void handleDetections(ObjectDetectionService &objectDetectionService, WebSockets
             }
         }
     }
+
+    // Awareness: only run grid search if enabled AND (object detection disabled OR 30s idle)
+#if ENABLE_AWARENESS_CONTEXT
+    static unsigned long lastDetectionT = 0; // updated when we have a detection
+    // update lastDetectionT when detection present
+    if (bestIdx >= 0) {
+        lastDetectionT = millis();
+    }
+
+    bool allowAwareness = false;
+    unsigned long now_check = millis();
+#if ENABLE_OBJECT_DETECTION
+    if (lastDetectionT > 0 && now_check - lastDetectionT >= 30000UL) allowAwareness = true;
+#else
+    // object detection disabled -> allow awareness immediately
+    allowAwareness = true;
+#endif
+
+    if (bestIdx < 0 && allowAwareness) {
+        static int searchRow = 0, searchCol = 0;
+        static unsigned long lastSearchT = 0;
+        unsigned long now = millis();
+        if (lastSearchT == 0 || now - lastSearchT >= AWARENESS_GRID_DWELL_MS) {
+            // advance to next cell
+            searchCol++;
+            if (searchCol >= AWARENESS_GRID_COLS) {
+                searchCol = 0;
+                searchRow++;
+                if (searchRow >= AWARENESS_GRID_ROWS) searchRow = 0;
+            }
+            lastSearchT = now;
+        }
+        // map grid cell to servo angles. If image dims available, map via image center
+        int angleX = 90;
+        int angleY = 90;
+        // Map grid cell to servo angles. Use edge-to-edge mapping so the grid
+        // covers the full 0..180 servo range. If only one row/col is configured
+        // keep center behavior to avoid division by zero.
+        if (detectionResult.width > 0 && detectionResult.height > 0) {
+            float fracX;
+            float fracY;
+            if (AWARENESS_GRID_COLS > 1) fracX = (float)searchCol / (float)(AWARENESS_GRID_COLS - 1);
+            else fracX = 0.5f;
+            if (AWARENESS_GRID_ROWS > 1) fracY = (float)searchRow / (float)(AWARENESS_GRID_ROWS - 1);
+            else fracY = 0.5f;
+            float cellCenterX = fracX * detectionResult.width;
+            float cellCenterY = fracY * detectionResult.height;
+            angleX = (int)round(180.0f - (cellCenterX / detectionResult.width) * 180.0f);
+            angleY = (int)round((cellCenterY / detectionResult.height) * 180.0f);
+        } else {
+            // no image dims: map columns/rows directly to full servo angle range 0..180
+            float fracX;
+            float fracY;
+            if (AWARENESS_GRID_COLS > 1) fracX = (float)searchCol / (float)(AWARENESS_GRID_COLS - 1);
+            else fracX = 0.5f;
+            if (AWARENESS_GRID_ROWS > 1) fracY = (float)searchRow / (float)(AWARENESS_GRID_ROWS - 1);
+            else fracY = 0.5f;
+            angleX = (int)round(180.0f - fracX * 180.0f);
+            angleY = (int)round(fracY * 180.0f);
+        }
+        angleX = constrain(angleX, 0, 180);
+        angleY = constrain(angleY, 0, 180);
+
+        // bounded-step movement while searching
+        const int MAX_STEP_DEG_SEARCH = 8;
+        int curServoX = xServo ? xServo->getAngle() : 90;
+        int curServoY = yServo ? yServo->getAngle() : 90;
+        int targetX = curServoX;
+        int targetY = curServoY;
+        int dx = angleX - curServoX;
+        if (abs(dx) > MAX_STEP_DEG_SEARCH) targetX = curServoX + (dx > 0 ? MAX_STEP_DEG_SEARCH : -MAX_STEP_DEG_SEARCH);
+        else targetX = angleX;
+        int dy = angleY - curServoY;
+        if (abs(dy) > MAX_STEP_DEG_SEARCH) targetY = curServoY + (dy > 0 ? MAX_STEP_DEG_SEARCH : -MAX_STEP_DEG_SEARCH);
+        else targetY = angleY;
+
+        // apply hysteresis when moving during search
+        const int HYSTERESIS_DEG = 3;
+        if (xServo != nullptr) {
+            static int prevTargetXsearch = -999;
+            if (prevTargetXsearch < -900 || abs(targetX - prevTargetXsearch) >= HYSTERESIS_DEG) {
+                xServo->setAngle(targetX);
+                prevTargetXsearch = targetX;
+            }
+        }
+        if (yServo != nullptr) {
+            static int prevTargetYsearch = -999;
+            if (prevTargetYsearch < -900 || abs(targetY - prevTargetYsearch) >= HYSTERESIS_DEG) {
+                yServo->setAngle(targetY);
+                prevTargetYsearch = targetY;
+            }
+        }
+    }
+#endif
 
     String outTxt;
     serializeJson(detectionJson, outTxt);

@@ -12,17 +12,8 @@ WebSocketsServer wsServer(WEBSOCKET_PORT);
 void networkTask(void *param) {
 	const char* TAG = "networkTask";
 
-	// Object detection service
-	static ObjectDetectionService objectDetectionService;
-	objectDetectionService.init();
-
 	TickType_t updateFrequency = 51;
-	unsigned long monitorCheck = millis();
-	unsigned long timeCheck = 0;
-	unsigned long weatherCheck = 0;
-	unsigned long gptCheck = 0;
-	const char* lastEvent;
-	
+
 	wifiManager.init(WIFI_HOSTNAME);
 	wifiManager.addNetwork(WIFI_SSID, WIFI_PASS);
 	wifiManager.begin();
@@ -31,6 +22,10 @@ void networkTask(void *param) {
 	// Init GPT
   ai.init(GPT_API_KEY);
   ai.setSystemMessage(GPT_SYSTEM_MESSAGE);
+
+	// Object detection service
+	static ObjectDetectionService objectDetectionService;
+	objectDetectionService.init(OBJECT_DETECTION_URL);
 
 	// webserver
 	setupWebRouter();
