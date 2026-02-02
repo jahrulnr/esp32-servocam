@@ -1,12 +1,15 @@
 #include <Arduino.h>
 #include <main.h>
 #include "tasks/tasks.h"
+#include "web/router.h"
+#include "callback/servo.h"
 
 FTPServer ftpServer(STORAGE);
 ServoControl* xServo;
 ServoControl* yServo;
 
 int I2Cdevices = 0;
+
 void init() {
   heap_caps_malloc_extmem_enable(0);
   setCpuFrequencyMhz(240);
@@ -66,6 +69,10 @@ void setup() {
   delay(1);
 	// low -> up, high -> down
   yServo->setAngle(DEFAULT_Y_ANGLE+1); // trigger update
+
+	// register websocket update callbacks so clients see servo movements
+	if (xServo) xServo->setUpdaterCallback(servoUpdateX);
+	if (yServo) yServo->setUpdaterCallback(servoUpdateY);
 
 	runTasks();
 }

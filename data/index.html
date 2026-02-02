@@ -192,6 +192,8 @@
           // WebSocket connection (placeholder, backend later)
           let ws;
           let prevObjectUrl = null; // last created blob URL for camera frame
+          // Prevent slider input handlers from sending back when we update from server
+          let suppressServoSend = false;
         function connectWS() {
           ws = new WebSocket(wsUrl);
           ws.onopen = function() {
@@ -209,6 +211,21 @@
                 // Handle pong
               } else if (msg.type === 'log') {
                 logMessage(`[${msg.level.toUpperCase()}] ${msg.message}`);
+                } else if (msg.type === 'servo_ack') {
+                  try {
+                    const axis = msg.axis;
+                    const angle = Number.parseInt(msg.angle);
+                    if (!isNaN(angle)) {
+                      suppressServoSend = true;
+                      if (axis === 'x') {
+                        $('#xSlider').val(angle).trigger('input');
+                      } else if (axis === 'y') {
+                        $('#ySlider').val(angle).trigger('input');
+                      }
+                      // small timeout to re-enable sending after UI update
+                      setTimeout(function(){ suppressServoSend = false; }, 120);
+                    }
+                  } catch(e) { console.error('servo_ack handling', e); }
                 } else if (msg.type === 'detections') {
                   // Draw detections on overlay canvas
                   try {
@@ -333,12 +350,12 @@
         $('#xSlider').on('input change', function(){
           const v = $(this).val();
           $('#xVal').text(v);
-          sendServoDebounced('x', Number.parseInt(v));
+          if (!suppressServoSend) sendServoDebounced('x', Number.parseInt(v));
         });
         $('#ySlider').on('input change', function(){
           const v = $(this).val();
           $('#yVal').text(v);
-          sendServoDebounced('y', Number.parseInt(v));
+          if (!suppressServoSend) sendServoDebounced('y', Number.parseInt(v));
         });
 
         $('#resetServos').click(function(){

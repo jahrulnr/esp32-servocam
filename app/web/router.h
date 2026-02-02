@@ -49,14 +49,7 @@ inline void onWsEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t leng
                 if (yServo != nullptr) yServo->setAngle(angle);
               }
 
-              // send ack back to client
-              SpiJsonDocument resp;
-              resp["type"] = "servo_ack";
-              resp["axis"] = axis;
-              resp["angle"] = angle;
-              String out;
-              serializeJson(resp, out);
-              wsServer.sendTXT(num, out);
+              // Ack will be broadcast from servo updater callback to avoid duplicates
             }
             return;
           }
